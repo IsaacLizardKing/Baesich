@@ -5,8 +5,9 @@ import qualified Data.Map as M
 import qualified Text.Parsec.Error
 import           Parsing2  hiding ((<$), (<$>), (<*>), (*>), (<*))
 import           Prelude
-
-
+import           Data.List
+import           Text.ParserCombinators.Parsec.Prim (many)
+import           GHC.List
 
 {-
 
@@ -169,11 +170,16 @@ Nop rules:
                 same as addition, but bases are subtracted from one another. 
                 NOTE: The value of any number converted to b0 is 0
 
-            for naddition 
+            for division:
+                same as nubtraction, but pure values are divided and then interpreted in the resulting base.
+            
+
 
             Baeversion
     (|) : convert left expression to right base normally through a generic base
     (|>): perform preceding operation normally, convert to following base naively
+
+    Not these.
    (<|) : perform preceding operation naively, convert to following base normally
    (<|>): perform preceding operation naivley, convert to following base naively
 
@@ -193,8 +199,7 @@ Nop rules:
         |     b6  43     |  -> b11 4 | 1  |     b12 40     |     b23 3C     |
         |     b6  75     |  OR b6  73     |  OR b6  120    |  OR b6  213    |
         +----------------+----------------+----------------+----------------+ 
-
-       
+    
 
 
             Nubtraction
@@ -215,40 +220,26 @@ Nop rules:
     (/>): div numbers naively, interpret in right base
    (</>): div numbers naively, interpret in the difference of the two bases (signed)
 
-
-
-
-
-
 -}
 
-
-
-charOrder :: [Char]
-charOrder = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-
-data Bumber where 
-    Gen   :: Integer -> Bumber
-    Weird :: String -> Bumber
-    deriving (Show)
+type Baes = [Integer]
 
 data Arith where
-    BaLit :: Bumber -> Arith -> Arith
-    Bipe  :: Arith -> Arith -> Arith
-    Pipe  :: Arith -> Arith -> Arith
-    Pope  :: Op -> Arith -> Arith -> Arith -> Arith
+    Bart  :: Baes -> Arith
+    BaLit :: Baes -> Arith -> Arith
     Lit   :: Bumber -> Arith
     Bin   :: Op -> Arith -> Arith -> Arith
     Var   :: String -> Arith 
     Let   :: String -> Arith -> Arith -> Arith
     If    :: Arith -> Arith -> Arith -> Arith
+ -- Bipe  :: Arith -> Arith -> Arith
+ -- Pope  :: Op -> Arith -> Arith -> Arith -> Arith
     deriving (Show)
 
 data Op where
-    Naive :: NOp
-    Smart :: SOp
-    deriving (Show, Eq)
+    Naive :: NOp -> Op
+    Smart :: SOp -> Op
+    deriving (Show)
 
 data NOp where
     LeftBaes  :: SOp -> NOp
@@ -261,15 +252,24 @@ data SOp where
     Minus :: SOp
     Times :: SOp
     Div   :: SOp
-    LThan :: SOp
-    GThan :: SOp
-    DEq   :: SOp
-    NEq   :: SOp
-    ELThn :: SOp
-    EGThn :: SOp
-    Amp   :: SOp
-    Bar   :: SOp
+ -- LThan :: SOp
+ -- GThan :: SOp
+ -- DEq   :: SOp
+ -- NEq   :: SOp
+ -- ELThn :: SOp
+ -- EGThn :: SOp
+ -- Amp   :: SOp
+    Pipe  :: SOp
     deriving (Show, Eq)
+
+data Baerror where
+    UnknownChar :: Char -> String -> Baerror
+    deriving (Show)
+
+data Bumber where
+    Bum :: [Integer] -> Baes -> Integer -> Bumber
+    Bam :: [Integer] -> Integer -> Bumber
+    deriving (Show)
 
 
 
@@ -301,11 +301,53 @@ integer = getInteger lexer
 identifier :: Parser String
 identifier = getIdentifier lexer
 
-parseBaLit :: Parser Arith
-parseBaLit = BaLit <$> (symbol "b" *> parseArith) <*> parens parseArith
+--parseSpecialDigits
 
-parseIf :: Parser Arith
-parseIf = (If <$> (reserved "if" *> parseArith) <*> (reserved "then" *> parseArith) <*> (reserved "else" *> parseArith))
+
+parseDigit :: Parser Integer
+parseDigit = 0 <$ char '0'
+         <|> 1 <$ char '1'
+         <|> 2 <$ char '2'
+         <|> 3 <$ char '3'
+         <|> 4 <$ char '4'
+         <|> 5 <$ char '5'
+         <|> 6 <$ char '6'
+         <|> 7 <$ char '7'
+         <|> 8 <$ char '8'
+         <|> 9 <$ char '9'
+         <|> 10 <$ char 'A'
+         <|> 11 <$ char 'B'
+         <|> 12 <$ char 'C'
+         <|> 13 <$ char 'D'
+         <|> 14 <$ char 'E'
+         <|> 15 <$ char 'F'
+         <|> 16 <$ char 'G'
+         <|> 17 <$ char 'H'
+         <|> 18 <$ char 'I'
+         <|> 19 <$ char 'J'
+         <|> 20 <$ char 'K'
+         <|> 21 <$ char 'L'
+         <|> 22 <$ char 'M'
+         <|> 23 <$ char 'N'
+         <|> 24 <$ char 'O'
+         <|> 25 <$ char 'P'
+         <|> 26 <$ char 'Q'
+         <|> 27 <$ char 'R'
+         <|> 28 <$ char 'S'
+         <|> 29 <$ char 'T'
+         <|> 30 <$ char 'U'
+         <|> 31 <$ char 'V'
+         <|> 32 <$ char 'W'
+         <|> 33 <$ char 'X'
+         <|> 34 <$ char 'Y'
+         <|> 35 <$ char 'Z'
+    
+
+parseDigits :: Parser [Integer]
+parseDigits = many $ parseDigit 
+
+-- parseDigit :: Parser Integer
+-- parseDigit = choice $ map (try . char) $ ['0'..'9'] ++ ['A'..'Z']
 
 --parsePrefix :: Parser Arith
 --parsePrefix = (Pre Neg <$> ((reservedOp "-") *> (parseArith <|> parens parseArith)))
@@ -317,19 +359,24 @@ parseIf = (If <$> (reserved "if" *> parseArith) <*> (reserved "then" *> parseAri
       --    <|> (Pre Abs <$ (reserved "abs") <*> parens parseArith)
         --  <|> (Pre Sqt <$ (reserved "sqrt") <*> parens parseArith)
 
-
 parseBaes :: Parser Baes
-parseBaes = ((char 'b') *> integer)
+parseBaes = do
+  char 'b'
+  base <- parseDigits
+  return $ base
 
 parseBaLit :: Parser Arith
-parseBaLit = BaLit <$> parseBaes <*> parens parseArith
+parseBaLit = (BaLit <$> parseBaes <*> parens parseArith)
+         <|> (Bart  <$> parseBaes)
 
+parseBam :: Parser Arith
+parseBam = do
+    digs <- parseDigits
+    --sgid <- reverse <$> digs
+    return $ Lit (Bam digs 0)
 
-parseArithAtom :: Parser Arith
-parseArithAtom = parseLet
-    <|> Var <$> identifier
-    <|> parseIf
-    <|> parens parseArith
+parseIf :: Parser Arith
+parseIf = (If <$> (reserved "if" *> parseArith) <*> (reserved "then" *> parseArith) <*> (reserved "else" *> parseArith))
 
 parseLet :: Parser Arith
 parseLet = Let
@@ -337,36 +384,66 @@ parseLet = Let
     <*> (reservedOp "="   *> parseArith)
     <*> (reserved   "in"  *> parseArith)
 
+parseArithAtom :: Parser Arith
+parseArithAtom = parseBaLit
+    <|> parseBam
+    <|> parens parseArith
+ -- <|> parseLet
+ -- <|> Var <$> identifier
+ -- <|> parseIf
+
 parseArith :: Parser Arith
 parseArith = buildExpressionParser table parseArithAtom
   where
     table = [ 
-              [ Infix (Bin Times <$ reservedOp "*") AssocLeft
-              , Infix (Bin Div   <$ reservedOp "/") AssocLeft
+              [ Infix (Bin (Smart Times          ) <$ reservedOp  "*")  AssocLeft
+              , Infix (Bin (Smart Div            ) <$ reservedOp  "/")  AssocLeft
+              , Infix (Bin (Naive (LeftBaes Times )) <$ reservedOp "<*")  AssocLeft
+              , Infix (Bin (Naive (LeftBaes Div   )) <$ reservedOp "</")  AssocLeft
+              , Infix (Bin (Naive (RightBaes Times)) <$ reservedOp  "*>") AssocLeft
+              , Infix (Bin (Naive (RightBaes Div  )) <$ reservedOp  "/>") AssocLeft
+              , Infix (Bin (Naive (BothBaes Times )) <$ reservedOp "<*>") AssocLeft
+              , Infix (Bin (Naive (BothBaes Div   )) <$ reservedOp "</>") AssocLeft
               ]
-            , [ Infix (Bin Plus  <$ reservedOp "+") AssocLeft
-              , Infix (Bin Minus <$ reservedOp "-") AssocLeft
+            , [ Infix (Bin (Smart Plus           ) <$ reservedOp  "+")  AssocLeft
+              , Infix (Bin (Smart Minus          ) <$ reservedOp  "-")  AssocLeft
+              , Infix (Bin (Naive (LeftBaes Plus  )) <$ reservedOp "<+")  AssocLeft
+              , Infix (Bin (Naive (LeftBaes Minus )) <$ reservedOp "<-")  AssocLeft
+              , Infix (Bin (Naive (RightBaes Plus )) <$ reservedOp  "+>") AssocLeft
+              , Infix (Bin (Naive (RightBaes Minus)) <$ reservedOp  "->") AssocLeft
+              , Infix (Bin (Naive (BothBaes Plus  )) <$ reservedOp "<+>") AssocLeft
+              , Infix (Bin (Naive (BothBaes Minus )) <$ reservedOp "<->") AssocLeft
               ]
-            , [ Infix (Bin GThan <$ reservedOp ">") AssocNone
-            ,   Infix (Bin LThan <$ reservedOp "<") AssocNone
-            ,   Infix (Bin DEq   <$ reservedOp "==") AssocNone
-            ,   Infix (Bin ELThn <$ reservedOp "<=") AssocNone
-            ,   Infix (Bin EGThn <$ reservedOp ">=") AssocNone
+              , [
+                Infix (Bin (Smart Pipe          ) <$ reservedOp  "|" ) AssocLeft
+              , Infix (Bin (Naive (RightBaes Pipe)) <$ reservedOp  "|>") AssocLeft
               ]
+--            , [ Infix (Bin GThan <$ reservedOp ">") AssocNone
+  --          ,   Infix (Bin (LThan <$ reservedOp "<") AssocNone
+    --        ,   Infix (Bin (DEq   <$ reservedOp "==") AssocNone
+      --      ,   Infix (Bin (ELThn <$ reservedOp "<=") AssocNone
+        --    ,   Infix (Bin (EGThn <$ reservedOp ">=") AssocNone
+          --    ]
             ]
 
-arith :: Parser Arith
-arith = whiteSpace *> parseArith <* eof
+baesich :: Parser Arith
+baesich = whiteSpace *> parseArith <* eof
+
+cleanIntlst :: [Integer] -> [Integer]
+cleanIntlst ((-2):xs) = xs
+cleanIntlst (a:xs)    = a : (cleanIntlst xs) 
+
+getOffset :: [Integer] -> Integer -> Integer
+getOffset ((-2):xs) d = d
+getOffset [] d        = 0
+getOffset (x:xs) d    = getOffset xs (d - 1)
 
 
 
 
-baesich :: Parser Integer
-baesich = whiteSpace *> integer <* eof
-
-baesichEval :: String -> Integer
+baesichEval :: String -> Arith
 baesichEval s = case parse baesich s of 
-    Left s  -> 0
+    Left s  -> Var (show s)
     Right a -> a
 
 

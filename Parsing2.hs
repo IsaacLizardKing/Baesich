@@ -27,7 +27,6 @@ module Parsing2
   , try
   )
   where
-
 import qualified Text.Parsec            as P
 import           Text.Parsec.Char
 import           Text.Parsec.Combinator

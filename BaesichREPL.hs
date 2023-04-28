@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTSyntax #-}
 
-import           Baesich
+import           Baesich                  (baesichEval)
 import           System.Console.Haskeline
 import           Data.List                (isPrefixOf)
 import           Data.Char                (isDigit)
@@ -8,11 +8,11 @@ import           GHC.Word                 (Word8)
 import           Control.Monad.State
 
 description :: String
-description = "Welcome to The Busy Beaver Sandbox!" ++ [toEnum 129451] ++ [toEnum 129451] ++ [toEnum 129451]
+description = "Prepare to have your Baes iched"
 
 helpMsg :: String
 helpMsg = unlines
-  [ ":syntax      - get a nice guide on how to format a beaver deck"
+  [ ":syntax      - get a nice guide on how to Baes your ich"
   , ":help        - print this message."
   , ":quit        - quit."
   ]
@@ -22,7 +22,7 @@ syntaxMsg = unlines
     [ "" ]
 
 eval :: String -> String
-eval = 
+eval s = (show (baesichEval s))
 
 baesichREPL :: IO ()
 baesichREPL = putStrLn description >> runInputT settings loop
