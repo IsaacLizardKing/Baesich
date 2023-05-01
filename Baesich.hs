@@ -221,19 +221,21 @@ Nop rules:
    (</>): div numbers naively, interpret in the difference of the two bases (signed)
 
 -}
-
-type Baes = [Integer]
+type Env  = M.Map String Bumbur
+type Baes = Integer
+type Offset = Integer
 
 data Arith where
-    Bart  :: Baes -> Arith
-    BaLit :: Baes -> Arith -> Arith
-    Lit   :: Bumber -> Arith
+    Lit   :: Bumbur -> Arith
     Bin   :: Op -> Arith -> Arith -> Arith
     Var   :: String -> Arith 
     Let   :: String -> Arith -> Arith -> Arith
-    If    :: Arith -> Arith -> Arith -> Arith
- -- Bipe  :: Arith -> Arith -> Arith
- -- Pope  :: Op -> Arith -> Arith -> Arith -> Arith
+    Bex   :: Arith -> Arith -> Arith -- Naive base conversion
+    Bart  :: Arith -> Arith -> Arith -- Smart base conversion
+ 
+ -- If    :: Arith -> Arith -> Arith -> Arith
+ -- Bart  :: Baes -> Arith
+ -- BaLit :: Baes -> Arith -> Arith
     deriving (Show)
 
 data Op where
@@ -247,11 +249,14 @@ data NOp where
     BothBaes  :: SOp -> NOp
     deriving (Show)
 
+
+
 data SOp where
     Plus  :: SOp
     Minus :: SOp
     Times :: SOp
     Div   :: SOp
+    Pipe  :: SOp
  -- LThan :: SOp
  -- GThan :: SOp
  -- DEq   :: SOp
@@ -259,16 +264,22 @@ data SOp where
  -- ELThn :: SOp
  -- EGThn :: SOp
  -- Amp   :: SOp
-    Pipe  :: SOp
     deriving (Show, Eq)
 
+
 data Baerror where
-    UnknownChar :: Char -> String -> Baerror
+    UnknownChar  :: Char -> String -> Baerror
+    UndefinedVar :: String -> Baerror
+    DivByZero    :: Baerror
+    Curse        :: Baerror
     deriving (Show)
 
-data Bumber where
-    Bum :: [Integer] -> Baes -> Integer -> Bumber
-    Bam :: [Integer] -> Integer -> Bumber
+
+
+data Bumbur where
+    Bum :: [Integer] -> Bumbur -> Integer -> Bumbur
+    Bam :: [Integer] -> Bumbur
+    Bur :: Integer
     deriving (Show)
 
 
@@ -305,75 +316,58 @@ identifier = getIdentifier lexer
 
 
 parseDigit :: Parser Integer
-parseDigit = 0 <$ char '0'
-         <|> 1 <$ char '1'
-         <|> 2 <$ char '2'
-         <|> 3 <$ char '3'
-         <|> 4 <$ char '4'
-         <|> 5 <$ char '5'
-         <|> 6 <$ char '6'
-         <|> 7 <$ char '7'
-         <|> 8 <$ char '8'
-         <|> 9 <$ char '9'
-         <|> 10 <$ char 'A'
-         <|> 11 <$ char 'B'
-         <|> 12 <$ char 'C'
-         <|> 13 <$ char 'D'
-         <|> 14 <$ char 'E'
-         <|> 15 <$ char 'F'
-         <|> 16 <$ char 'G'
-         <|> 17 <$ char 'H'
-         <|> 18 <$ char 'I'
-         <|> 19 <$ char 'J'
-         <|> 20 <$ char 'K'
-         <|> 21 <$ char 'L'
-         <|> 22 <$ char 'M'
-         <|> 23 <$ char 'N'
-         <|> 24 <$ char 'O'
-         <|> 25 <$ char 'P'
-         <|> 26 <$ char 'Q'
-         <|> 27 <$ char 'R'
-         <|> 28 <$ char 'S'
-         <|> 29 <$ char 'T'
-         <|> 30 <$ char 'U'
-         <|> 31 <$ char 'V'
-         <|> 32 <$ char 'W'
-         <|> 33 <$ char 'X'
-         <|> 34 <$ char 'Y'
-         <|> 35 <$ char 'Z'
-    
+parseDigit = (-2) <$ char '.'
+         <|> (-1) <$ char '-'
+           <|> 0  <$ char '0'
+           <|> 1  <$ char '1'
+           <|> 2  <$ char '2'
+           <|> 3  <$ char '3'
+           <|> 4  <$ char '4'
+           <|> 5  <$ char '5'
+           <|> 6  <$ char '6'
+           <|> 7  <$ char '7'
+           <|> 8  <$ char '8'
+           <|> 9  <$ char '9'
+           <|> 10 <$ char 'A'
+           <|> 11 <$ char 'B'
+           <|> 12 <$ char 'C'
+           <|> 13 <$ char 'D'
+           <|> 14 <$ char 'E'
+           <|> 15 <$ char 'F'
+           <|> 16 <$ char 'G'
+           <|> 17 <$ char 'H'
+           <|> 18 <$ char 'I'
+           <|> 19 <$ char 'J'
+           <|> 20 <$ char 'K'
+           <|> 21 <$ char 'L'
+           <|> 22 <$ char 'M'
+           <|> 23 <$ char 'N'
+           <|> 24 <$ char 'O'
+           <|> 25 <$ char 'P'
+           <|> 26 <$ char 'Q'
+           <|> 27 <$ char 'R'
+           <|> 28 <$ char 'S'
+           <|> 29 <$ char 'T'
+           <|> 30 <$ char 'U'
+           <|> 31 <$ char 'V'
+           <|> 32 <$ char 'W'
+           <|> 33 <$ char 'X'
+           <|> 34 <$ char 'Y'
+           <|> 35 <$ char 'Z'
+
 
 parseDigits :: Parser [Integer]
-parseDigits = many $ parseDigit 
+parseDigits = many $ parseDigit
 
--- parseDigit :: Parser Integer
--- parseDigit = choice $ map (try . char) $ ['0'..'9'] ++ ['A'..'Z']
+parseBaes :: Parser Bumbur
+parseBaes = char 'b' *> (Bam <$> parseDigits)
 
---parsePrefix :: Parser Arith
---parsePrefix = (Pre Neg <$> ((reservedOp "-") *> (parseArith <|> parens parseArith)))
-
---parseFuncs  :: Parser Arith
---parseFuncs  = (Pre Sin <$ (reserved "sin") <*> parens parseArith) 
-  --        <|> (Pre Cos <$ (reserved "cos") <*> parens parseArith)
-    --      <|> (Pre Tan <$ (reserved "tan") <*> parens parseArith)
-      --    <|> (Pre Abs <$ (reserved "abs") <*> parens parseArith)
-        --  <|> (Pre Sqt <$ (reserved "sqrt") <*> parens parseArith)
-
-parseBaes :: Parser Baes
-parseBaes = do
-  char 'b'
-  base <- parseDigits
-  return $ base
-
-parseBaLit :: Parser Arith
-parseBaLit = (BaLit <$> parseBaes <*> parens parseArith)
-         <|> (Bart  <$> parseBaes)
+parseBarqs :: Parser Arith
+parseBex = Bex  <$> (char 'n' *> (parens parseArith)) <*> parens parseArith
+       <|> Bart <$> (char 'b' *> (parens parseArith)) <*> parens parseArith
 
 parseBam :: Parser Arith
-parseBam = do
-    digs <- parseDigits
-    --sgid <- reverse <$> digs
-    return $ Lit (Bam digs 0)
+parseBam = Lit <$> (Bam (parseDigits))
 
 parseIf :: Parser Arith
 parseIf = (If <$> (reserved "if" *> parseArith) <*> (reserved "then" *> parseArith) <*> (reserved "else" *> parseArith))
@@ -385,7 +379,7 @@ parseLet = Let
     <*> (reserved   "in"  *> parseArith)
 
 parseArithAtom :: Parser Arith
-parseArithAtom = parseBaLit
+parseArithAtom = parseBarqs
     <|> parseBam
     <|> parens parseArith
  -- <|> parseLet
@@ -426,25 +420,124 @@ parseArith = buildExpressionParser table parseArithAtom
           --    ]
             ]
 
+
+-- parsePrefix :: Parser Arith
+-- parsePrefix = (Pre Neg <$> ((reservedOp "-") *> (parseArith <|> parens parseArith)))
+
+-- parseFuncs  :: Parser Arith
+-- parseFuncs  = (Pre Sin <$ (reserved "sin") <*> parens parseArith) 
+  --        <|> (Pre Cos <$ (reserved "cos") <*> parens parseArith)
+    --      <|> (Pre Tan <$ (reserved "tan") <*> parens parseArith)
+      --    <|> (Pre Abs <$ (reserved "abs") <*> parens parseArith)
+        --  <|> (Pre Sqt <$ (reserved "sqrt") <*> parens parseArith)
+
+
 baesich :: Parser Arith
 baesich = whiteSpace *> parseArith <* eof
+
+showBumbur :: Bumbur -> String
+showBumbur (Bur b) = show b
+showBumbur b       = showBumbur (bumbur2Bur b)
+
+thriBaes :: Integer -> Integer -> Baes -> Offset
+thriBaes a b c = if (a < (c ^ b)) then (b - 1) else thriBaes a (b + 1) c
+
+toBaes :: Integer -> Baes -> Offset -> [Integer]
+toBaes a b c = 
+    let r = (((a `mod` (b ^ c)) + (b ^ c)) `mod` (b ^ c)) in 
+        toBaes r b (c - 1) ++ ((a - r) 'div' (b ^ c))
+toBaes 0 _ _ = []
+
+bum2BurUnpacked :: [Integer] -> Baes -> Offset -> Integer
+bum2BurUnpacked (a:as) x o = a * (x ^ o) + bum2BurUnpacked (as x (o + 1))
+bum2BurUnpacked [] _ _ = 0
+
+bum2Bur :: Bumbur -> Bumbur
+bum2Bur (Bum i (Bur a) o) = Bur (bum2BurUnpacked i a o)
+
+bum2Bam :: Bumbur -> Bumbur
+bum2Bam (Bum i _ _) = Bam i
+
+bur2Bum :: Baes -> Bumbur -> Bumbur
+bur2Bum b (Bur i) = 
+    let OOfset = (thriBaes i 0 b) in
+    let digs   = (toBaes i b OOfset) in
+    Bum digs b ((length digs) - OOfset)
+
+bur2Bam :: Baes -> Bumbur -> Bumbur
+bur2Bam b (Bur i) =
+    let OOfset = (thriBaes i 0 b) in
+    let digs   = (toBaes i b OOfset) in
+    Bam digs
+
+bam2Bur :: Baes -> Offset -> Bumbur -> Bumbur
+bam2Bur b o (Bam a) = Bur (bum2BurUnpacked a b o)
+
+bam2Bum :: Bumbur -> Baes -> Offset -> Bumbur
+bam2Bum (Bam a) b o = Bum a b o
+
+
+bumbur2Bur :: Bumbur -> Bumbur
+bumbur2Bur (Bum a b o) = bum2Bur a b o 
+bumbur2Bur (Bam a)     = bam2Bur a 10 0
+bumbur2Bur (Bur a)     = Bur a
+
+
 
 cleanIntlst :: [Integer] -> [Integer]
 cleanIntlst ((-2):xs) = xs
 cleanIntlst (a:xs)    = a : (cleanIntlst xs) 
 
 getOffset :: [Integer] -> Integer -> Integer
-getOffset ((-2):xs) d = d
-getOffset [] d        = 0
-getOffset (x:xs) d    = getOffset xs (d - 1)
+getOffset ((-2):_) d = d
+getOffset [] d       = 0
+getOffset (x:xs) d   = getOffset xs (d - 1)
+
+sopBetwixt2Burs :: SOp -> Bumbur -> Bumbur -> Bumbur
+sopBetwixt2Burs Plus (Bur a) (Bur b)  = Bur (a + b)
+sopBetwixt2Burs Minus (Bur a) (Bur b) = Bur (a - b)
+sopBetwixt2Burs Times (Bur a) (Bur b) = Bur (a * b)
+sopBetwixt2Burs Div (Bur a) (Bur b)   = if (b == 0) then (Bur 0) else (Bur (a 'div' b))
+sopBetwixt2Burs Pipe (Bur a) (Bur b)  = bur2Bum b (Bur a)
+sopBetwixt2Burs _ _ _                 = Bur (-69)
+
+nOperation :: SOp -> [Integer] -> [Integer] -> [Integer]
+nOperation op (b:bs) (c:cs) = case sopBetwixt2Burs op (Bur b) (Bur c) of
+                                (Bur geoff) -> [geoff] : nOperation bs cs
+nOperation op [] a          = a
+nOperation op a  []         = a
+nOperation op [] []         = []
 
 
+
+doOpDiDoo :: Op -> Bumbur -> Bumbur -> Either Baerror Bumbur
+doOpDiDoo (Smart op) a b = Right sopBetwixt2Burs (op (bumbur2Bur a) (bumbur2Bur b))
+doOpDiDoo (Naive (LeftBaes op)) (Bum a1 b1 o1) (Bum a2 _ o2)  = (nOperation a1 a2)
+doOpDiDoo (Naive (RightBaes op)) (Bum a1 _ o1) (Bum a2 b2 o2) = 
+doOpDiDoo (Naive (BothBaes op)) (Bum a1 b1 o1) (Bum a2 b2 o2) = 
+
+interpBaesich :: Env -> Arith -> Either Baerror Bumbur
+interpBaesich e (Bart e1 e2)   = interpBaesich e e1 >>= \b1 -> 
+                                 interpBaesich e e2 >>= \b2 -> 
+                                    Right bur2Bum (bum2Bur b1) (Bur (bum2Bur b2))
+interpBaesich e (Bex e1 e2)    = interpBaesich e e1 >>= \b1 -> 
+                                 interpBaesich e e2 >>= \b2 -> case b2 of
+                                    (Bum a b o) -> Right (Bum a b2 o)
+                                    (Bam a)     -> Right (Bum a b2 0) 
+                                    (Bur i)     -> Right (bur2Bum b2 i)
+interpBaesich _ (Lit (Bam n))  = bam2Bum (Bam (cleanIntlst (reverse n))) 10 (getOffset (reverse n))
+interpBaesich e (Var s)        = case (M.lookup s e) of 
+    Just b  -> Right b
+    Nothing -> Left (UnknownChar 'v' "stupid bitch")
+interpBaesich e (Let s e1 e2)  = interpBaesich e e1 >>= \b1 -> interpBaesich (M.insert s b1 e) e2
+interpBaesich e (Bin op e1 e2) = interpBaesich e e1 >>= \b1 -> interpBaesich e e2 >>= \b2 -> doOpDiDoo
 
 
 baesichEval :: String -> Arith
 baesichEval s = case parse baesich s of 
     Left s  -> Var (show s)
-    Right a -> a
+    Right a -> case interpBaesich M.empty a of
+        Left s  -> Var (show s)
+        Right n -> Lit n
 
 
---interpBaesich :: 
