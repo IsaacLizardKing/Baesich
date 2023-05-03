@@ -53,7 +53,7 @@ Nultiplication
 
 
     b3 20
-<*> b2  1
+<*> b2 01
     b5 21
 
     b5  3
@@ -312,9 +312,6 @@ integer = getInteger lexer
 identifier :: Parser String
 identifier = getIdentifier lexer
 
---parseSpecialDigits
-
-
 parseDigit :: Parser Integer
 parseDigit = (-2) <$ char '.'
          <|> (-1) <$ char '-'
@@ -448,6 +445,12 @@ toBaes a b c =
         toBaes r b (c - 1) ++ ((a - r) 'div' (b ^ c))
 toBaes 0 _ _ = []
 
+
+
+whiper :: Bumbur -> Bumbur
+whiper (Bum a b o) = bur2Bum b (bum2Bur (Bum a b o))
+
+
 bum2BurUnpacked :: [Integer] -> Baes -> Offset -> Integer
 bum2BurUnpacked (a:as) x o = a * (x ^ o) + bum2BurUnpacked (as x (o + 1))
 bum2BurUnpacked [] _ _ = 0
@@ -501,20 +504,52 @@ sopBetwixt2Burs Div (Bur a) (Bur b)   = if (b == 0) then (Bur 0) else (Bur (a 'd
 sopBetwixt2Burs Pipe (Bur a) (Bur b)  = bur2Bum b (Bur a)
 sopBetwixt2Burs _ _ _                 = Bur (-69)
 
-nOperation :: SOp -> [Integer] -> [Integer] -> [Integer]
-nOperation op (b:bs) (c:cs) = case sopBetwixt2Burs op (Bur b) (Bur c) of
-                                (Bur geoff) -> [geoff] : nOperation bs cs
-nOperation op [] a          = a
-nOperation op a  []         = a
-nOperation op [] []         = []
 
+bur2Int :: Bumbur -> Integer
+bur2Int (Bur a) = a
 
+bum2Intarr :: Bumbur -> [Integer]
+bum2Intarr (Bum a _ _) = a
+bum2Intarr (Bam a)     = a
+
+offsetMatch :: Bumbur -> Bumbur -> Bumbur
+offsetMatch (Bum a1 b1 o1) (Bum a2 b2 o2) = if (o1 <= o2) then (Bum a1 b1 o1) else (Bum (0:a1) b1 (o1 - 1))
+
+nopPrep :: Bumbur -> Bumbur -> ([Integer], [Integer])
+nopPrep (Bum a1 b1 o1) (Bum a2 b2 o2) = ((bum2Intarr (offsetMatch (Bum a1 b1 o1) (Bum a2 b2 o2))), (bum2Intarr (offsetMatch (Bum a2 b2 o2) (Bum a1 b1 o1))))
+
+naddition :: [Integer] -> [Integer] -> [Integer]
+naddition (b:bs) (c:cs) = case sopBetwixt2Burs Plus (Bur b) (Bur c) of
+                                (Bur geoff) -> geoff : naddition bs cs
+naddition [] (c:cs)     = case sopBetwixt2Burs Plus (Bur 0) (Bur c) of
+                                (Bur geoff) -> geoff : naddition [] cs
+naddition (b:bs)  []    = case sopBetwixt2Burs Plus (Bur b) (Bur 0) of
+                                (Bur geoff) -> geoff : naddition bs []
+naddition [] []         = []
+
+nultiplication :: [Bumbur] -> [Integer]
+nultiplication ((Bam a):(Bam b):c) = nultiplication (Bam (naddition Plus a (0:b))) (times10 c)
+nultiplication [Bam a, Bam b]      = naddition Plus a (0:b)
+
+times10 :: [Bumbur] -> [Bumbur]
+times10 ((Bam a):as) = (Bam (0:a)) : (times10 as)
+times10 [] = []
+
+nultiplicationHelper :: [Integer] -> [Integer] -> [Bumbur]
+nultiplicationHelper (a:as) (b:bs) = (Bam [a, b]) : (nultiplicationHelper as bs)
+nultiplicationHelper (a:as) []     = (Bam [a, 0]) : (nultiplicationHelper as [])
+nultiplicationHelper []     (b:bs) = (Bam [0, b]) : (nultiplicationHelper [] bs)
+nultiplicationHelper []     []     = []
+
+nOperation :: Op -> ([Integer], [Integer]) -> [Integer]
+nOperation Plus (a, b)  = naddition a b
+nOperation Times (a, b) = nultiplication (nultiplicationHelper a b)
 
 doOpDiDoo :: Op -> Bumbur -> Bumbur -> Either Baerror Bumbur
-doOpDiDoo (Smart op) a b = Right sopBetwixt2Burs (op (bumbur2Bur a) (bumbur2Bur b))
-doOpDiDoo (Naive (LeftBaes op)) (Bum a1 b1 o1) (Bum a2 _ o2)  = (nOperation a1 a2)
-doOpDiDoo (Naive (RightBaes op)) (Bum a1 _ o1) (Bum a2 b2 o2) = 
-doOpDiDoo (Naive (BothBaes op)) (Bum a1 b1 o1) (Bum a2 b2 o2) = 
+doOpDiDoo (Smart op) a b                                       = Right sopBetwixt2Burs (op (bumbur2Bur a) (bumbur2Bur b))
+doOpDiDoo (Naive (LeftBaes op))  (Bum a1 b1 o1) (Bum a2 b2 o2) = whiper (Bum (nOperation op (nopPrep (Bum a1 b1 o1) (Bum a2 b1 o2))) b1 (min o1 o2))
+doOpDiDoo (Naive (RightBaes op)) (Bum a1 b1 o1) (Bum a2 b2 o2) = whiper (Bum (nOperation op (nopPrep (Bum a1 b1 o1) (Bum a2 b1 o2))) b2 (min o1 o2))
+doOpDiDoo (Naive (BothBaes op))  (Bum a1 b1 o1) (Bum a2 b2 o2) = whiper (Bum (nOperation op (nopPrep (Bum a1 b1 o1) (Bum a2 b1 o2))) (b1 + b2) (min o1 o2))
 
 interpBaesich :: Env -> Arith -> Either Baerror Bumbur
 interpBaesich e (Bart e1 e2)   = interpBaesich e e1 >>= \b1 -> 
@@ -522,7 +557,7 @@ interpBaesich e (Bart e1 e2)   = interpBaesich e e1 >>= \b1 ->
                                     Right bur2Bum (bum2Bur b1) (Bur (bum2Bur b2))
 interpBaesich e (Bex e1 e2)    = interpBaesich e e1 >>= \b1 -> 
                                  interpBaesich e e2 >>= \b2 -> case b2 of
-                                    (Bum a b o) -> Right (Bum a b2 o)
+                                    (Bum a b o) -> Right (Bum a b2 o) 
                                     (Bam a)     -> Right (Bum a b2 0) 
                                     (Bur i)     -> Right (bur2Bum b2 i)
 interpBaesich _ (Lit (Bam n))  = bam2Bum (Bam (cleanIntlst (reverse n))) 10 (getOffset (reverse n))
