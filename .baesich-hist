@@ -1,26 +1,100 @@
-C
-c
-bZ(1Z)
-b2(1Z)
-b2(1A)
-b2(10)
-b2(10)
 :q
-b2(10)
+let x = 5 in ADFLKSDFJS
+let x = 5 in x
 :q
-b2(10)
+let x = 5 in x
+let x = 5 in 5 * x
+let x = 5 in ABZ * x
+let x = FFFF in ABZ * x
 :q
-b2(10)
 :q
-b2(10)
+let x = FFFF in ABZ * x
+let x = FFFF in ABZ
+let x = FFFF in ABZ * x
+let x = FFFF in x * ABZ
+let x = FFFF in  x  * ABZ
+let x = FFFF in x  * ABZ
 :q
-b2(10)
-b2(10)
-b2(10)
-b2(10)
+let x = FFFF in x  * ABZ
+let x = FFFF in  x * ABZ
+let x = FFFF  in x * ABZ
+let x = FFFF in x * ABZ
+let x = FFFF in (x * ABZ)
+let x = (FFFF) in (x * ABZ)
+let x = FFFF in (x * ABZ)
+let x = FFFF in x * ABZ
 :q
-b2(10)
-b2(10)
-b2(10)
-b2(10)
-b2(10)
+let x = FFFF in x * ABZ
+let x = 0 in x / 0
+let x = 5 in x + 5
+:q
+let x = 5 in x + 5
+let x = 5 in x + 5
+:q
+let x = 5 in x + 5
+:q
+n(8)(123) * 12
+10 + 2
+11 / 5
+11 /> 5
+11 /> 5
+11 /> 5
+11 / 5
+:q
+11 / 5
+11 </> 5
+11 </ 5
+11 /> 5
+b(2)(11) </> b(10)(1)
+5 </> 5
+5 / 0
+2 - 2
+0
+b(10)(0)
+0
+0
+:q
+:r
+b(10)(0)
+b(10)(0) + b(8)(10)
+b(10)(0) + b8(8)
+b(10)(0) + 8
+b(10)(0)
+b10(0)
+0
+2 - 2
+:q
+2 - 2
+100
+0 / 5
+5 / 0
+:q
+5 / 0
+:q
+5 / 0 
+5 / 0 
+:q
+5/0
+b(10)(11) </> b(2)(1)
+b(2)(11) </> b(10)(1)
+:q
+b(2)(11) </> b(10)(1)
+b(2)(11) </> b(10)(1)
+b(2)(11) /> b(10)(1)
+:q
+b(2)(11) />:q b(10)(1)
+b(2)(11) /> b(10)(1)
+11 /> 5
+11 </ 5
+10 / 5
+11 / 5
+10 /> 5
+:q
+10 /> 5
+10 /> 5
+10 /> 5
+10 </> 5
+10 / 5
+:q
+10 |> 8
+:q
