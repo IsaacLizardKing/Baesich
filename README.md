@@ -15,6 +15,6 @@ Have fun experimenting :)
 
 
 ## Contributions
-Jauss: 
+Jauss: I did a lot of the typing and translation of solutions into Haskell. Garrett insists I did a majority of the work but I can't claim that. I spent a lot of time circling on specific rules, and had I been alone, I would have gone down far too many blind alleys without Garrett's presence. I did a lot of development on concepts and features that couldn't be implemented on time. 
 
 Garrett: Though I don't have many commits on the github, this is because we spent our time working together and did our coding using Jauss's laptop as I lack a laptop to do coding on the go. I did my share of the bug checking and implementation, but what I think the most important contribution both of us applied was in being a measure of support for the other. We both agree that if this had been a single person project it would've been far far more difficult to complete, especially by the due date, as so much more time would've been spent simply deer in the headlights staring at the screen when something goes wrong or a question comes up of how exactly to implement a feature when the first idea won't work.
